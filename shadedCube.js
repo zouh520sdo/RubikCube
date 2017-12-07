@@ -21,6 +21,9 @@ var deltaR;
 // For setting
 var mirrorMode = true;
 
+// For shuffling
+var shuffles = [];
+
 // Mapping between keys and direction
 var keys2Dir = new Map();
 keys2Dir.set("j", vec3(0, 0, 1));
@@ -48,6 +51,11 @@ keys2Dir.set("W", vec3(0, 1, 0));
 keys2Dir.set("S", vec3(0, -1, 0));
 keys2Dir.set("Q", vec3(1, 0, 0));
 keys2Dir.set("R", vec3(-1, 0, 0));
+
+var keysArray = [];
+for (var key of keys2Dir.keys()) {
+    keysArray.push(key);
+}
 
 var vertices = [
         vec4( -0.5, -0.5,  0.5, 1.0 ),
@@ -232,49 +240,23 @@ window.onload = function init() {
         
         console.log(event.shiftKey);
         console.log(event.key);
-        
         console.log(keys2Dir.get(event.key));
-        
-        if (keys2Dir.get(event.key)!== undefined) {
-            var axis = keys2Dir.get(event.key);
-            var aaxis = [];
-            if (!mirrorMode) {
-                aaxis = axis;
-            }
-            else {
-                axis.forEach(function(element) {
-                    aaxis.push(Math.abs(element));
-                });
-            }
-            var reverse = event.shiftKey;
-            
-            if (isAnimating) return;
-            if (reverse) {
-                deltaR = rotate(-delta, aaxis);
-            }
-            else {
-                deltaR = rotate(delta, aaxis);
-            }
-            for (var i=0; i<cubesArray.length; i++) {
-                var cube = cubesArray[i];
-                
-                var index = axis.indexOf(1) == -1? axis.indexOf(-1) : axis.indexOf(1);
-                
-                console.log(index);
-                
-                if (axis[index] * cube.origin[index] > 0) {
-                    cube.rotate(aaxis, reverse);
-                }
-            }
-            startRotateAnim();
-        }
-        
+        rotateSide(keys2Dir.get(event.key), event.shiftKey);    
     });
 
     document.getElementById("Restart").onclick = function(){
         initCubes();
         renderCubes();
     };
+    
+    document.getElementById("Shuffle").onclick = function() {
+        for (var i=0; i<15; i++) {
+            var index = Math.floor(Math.random() * keysArray.length);
+            shuffles.push(keys2Dir.get(keysArray[index]));
+        }
+        console.log(shuffles.length);
+        shuffle();
+    }
 
     gl.uniform4fv(gl.getUniformLocation(program, "ambientProduct"),
        flatten(ambientProduct));
@@ -292,6 +274,49 @@ window.onload = function init() {
        false, flatten(projection));
 
     render();
+}
+
+var shuffle = function() {
+    console.log(shuffles.length);
+    if (shuffles.length == 0) return;
+
+    var a = shuffles.pop();
+    var reverse = Math.random < 0.5? true : false;
+
+    rotateSide(a, reverse);
+}
+
+var rotateSide = function(axis, reverse) {
+    if (axis !== undefined) {
+        var aaxis = [];
+        if (!mirrorMode) {
+            aaxis = axis;
+        }
+        else {
+            axis.forEach(function(element) {
+                aaxis.push(Math.abs(element));
+            });
+        }
+
+        if (isAnimating) return;
+        if (reverse) {
+            deltaR = rotate(-delta, aaxis);
+        }
+        else {
+            deltaR = rotate(delta, aaxis);
+        }
+        for (var i=0; i<cubesArray.length; i++) {
+            var cube = cubesArray[i];
+
+            var index = axis.indexOf(1) == -1? axis.indexOf(-1) : axis.indexOf(1);
+
+
+            if (axis[index] * cube.origin[index] > 0) {
+                cube.rotate(aaxis, reverse);
+            }
+        }
+        startRotateAnim();
+    }
 }
 
 var isArrayEqual = function(a, b) {
@@ -368,6 +393,7 @@ var renderCubes = function() {
     }
     else {
         isAnimating = false;
+        shuffle();
     }
 }
 
